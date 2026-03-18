@@ -14,11 +14,5 @@ class StreamInfo:
     video_m3u8: str
 
 
-@dataclass
-class Credentials:
-    username: str
-    password: str
-
-
 class CliError(Exception):
     pass

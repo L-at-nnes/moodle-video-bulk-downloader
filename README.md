@@ -15,7 +15,7 @@ French version: [README_FR.md](README_FR.md)
 
 - Download Moodle/UbiCast replay pages from one URL or a text list
 - Parse grouped input files with course sections
-- Authenticate with cookies first (`cookies.txt`), fallback to login file
+- Authenticate with cookies only (`cookies.txt`)
 - Detect `audio_*.m3u8` and best available video variant automatically (e.g. `1440p > 1080p`)
 - Download audio/video with live progress bars
 - Mux into MKV with `mkvmerge` (MKVToolNix CLI)
@@ -24,7 +24,6 @@ French version: [README_FR.md](README_FR.md)
 ## Requirements
 
 - Python 3.11+
-- Internet access
 
 Install dependencies:
 
@@ -35,22 +34,23 @@ python -m playwright install chromium
 
 ## Authentication
 
-### Recommended: cookies
+Cookies are the only supported authentication method.
 
-Create `cookies.txt` (one cookie per line):
+### How to get cookies from Moodle
+
+1. Log in to Moodle in your browser.
+2. Open Developer Tools (`F12`) and go to Application/Storage -> Cookies.
+3. Select the Moodle domain (for example `https://moodle.unine.ch`).
+4. Copy at least:
+	- `MoodleSession`
+	- `_shibsession_...` (or equivalent SSO session cookie)
+5. Paste them into `cookies.txt`, one per line in `NAME=VALUE` format.
+
+Example:
 
 ```text
 MoodleSession=...
 _shibsession_...=...
-```
-
-### Fallback: login/password
-
-Create `login.txt`:
-
-```text
-email@unine.ch
-password
 ```
 
 ## Input file format
@@ -90,6 +90,23 @@ python main.py --url "https://moodle.unine.ch/mod/ubicast/view.php?id=xxxxxx"
 | `--output-dir` | `dl` | Output directory |
 | `--show-browser` | `false` | Show browser for auth debugging |
 | `--keep-temp` | `false` | Keep separate audio/video files |
+
+## Build EXE (PyInstaller)
+
+Build command:
+
+```powershell
+compile.cmd
+```
+
+Output:
+
+- `dist/moodle-video-bulk-downloader.exe`
+
+Important:
+
+- Keep `tools/ffmpeg.exe` and `tools/mkvmerge.exe` available with your project/distribution.
+- `icon.ico` is used during EXE compilation.
 
 ## Output
 

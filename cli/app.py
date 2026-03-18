@@ -10,7 +10,7 @@ from tqdm import tqdm
 from .auth import create_storage_state
 from .constants import DEFAULT_OUTPUT_DIR
 from .downloader import download_and_mux
-from .input_parsing import build_entries, read_credentials
+from .input_parsing import build_entries
 from .models import CliError, LinkEntry
 from .streams import extract_streams_from_page, parse_video_height_from_url
 from .system_tools import ensure_local_mkvtoolnix, find_ffmpeg
@@ -67,8 +67,7 @@ def parse_args(argv: Optional[Iterable[str]] = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Download Moodle UbiCast replays and mux to MKV.")
     parser.add_argument("--url", action="append", default=[], help="Single Moodle replay URL (repeatable)")
     parser.add_argument("--input", type=Path, help="Input text file with course headings and URLs")
-    parser.add_argument("--cookie-file", type=Path, default=Path("cookies.txt"), help="Cookie file (priority auth)")
-    parser.add_argument("--login-file", type=Path, default=Path("login.txt"), help="Fallback login file")
+    parser.add_argument("--cookie-file", type=Path, default=Path("cookies.txt"), help="Cookie file")
     parser.add_argument("--output-dir", type=Path, default=Path(DEFAULT_OUTPUT_DIR), help="Output directory")
     parser.add_argument("--concurrency", type=int, default=1, help="Number of links processed in parallel")
     parser.add_argument("--download-threads", type=int, default=1, help="ffmpeg threads per stream")
@@ -95,15 +94,10 @@ def main(argv: Optional[Iterable[str]] = None) -> int:
     ffmpeg_path = find_ffmpeg(project_root)
     mkvmerge_path = ensure_local_mkvtoolnix(project_root)
 
-    credentials = None
-    if not args.cookie_file.exists() and args.login_file.exists():
-        credentials = read_credentials(args.login_file)
-
     storage_state_path = project_root / "playwright-state.json"
     auth_mode = create_storage_state(
         storage_state_path=storage_state_path,
-        cookie_file=(args.cookie_file if args.cookie_file.exists() else None),
-        credentials=credentials,
+        cookie_file=args.cookie_file,
         headless=not args.show_browser,
     )
 

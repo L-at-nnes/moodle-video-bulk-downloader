@@ -2,14 +2,7 @@ from pathlib import Path
 from typing import Optional
 
 from .constants import URL_PATTERN
-from .models import CliError, Credentials, LinkEntry
-
-
-def read_credentials(login_file: Path) -> Credentials:
-    lines = [line.strip() for line in login_file.read_text(encoding="utf-8").splitlines() if line.strip()]
-    if len(lines) < 2:
-        raise CliError("Login file must contain email on line 1 and password on line 2.")
-    return Credentials(username=lines[0], password=lines[1])
+from .models import CliError, LinkEntry
 
 
 def read_cookie_file(cookie_file: Path) -> list[dict]:

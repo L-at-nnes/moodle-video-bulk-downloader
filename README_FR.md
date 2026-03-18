@@ -15,7 +15,7 @@ English version: [README.md](README.md)
 
 - Téléchargement des replays Moodle/UbiCast depuis une URL ou un fichier texte
 - Support des fichiers d’entrée avec sections de cours
-- Authentification prioritaire par cookies (`cookies.txt`), avec fallback login
+- Authentification uniquement par cookies (`cookies.txt`)
 - Détection de `audio_*.m3u8` et meilleure variante vidéo disponible (ex: `1440p > 1080p`)
 - Téléchargement audio/vidéo avec barres de progression
 - Mux final en MKV avec `mkvmerge` (MKVToolNix CLI)
@@ -24,7 +24,6 @@ English version: [README.md](README.md)
 ## Prérequis
 
 - Python 3.11+
-- Accès internet
 
 Installer les dépendances :
 
@@ -35,22 +34,23 @@ python -m playwright install chromium
 
 ## Authentification
 
-### Recommandé : cookies
+Les cookies sont la seule méthode d'authentification supportée.
 
-Créer `cookies.txt` (un cookie par ligne) :
+### Comment récupérer les cookies Moodle
+
+1. Connectez-vous à Moodle dans votre navigateur.
+2. Ouvrez les DevTools (`F12`) puis Application/Storage -> Cookies.
+3. Sélectionnez le domaine Moodle (par exemple `https://moodle.unine.ch`).
+4. Copiez au minimum:
+	- `MoodleSession`
+	- `_shibsession_...` (ou cookie de session SSO équivalent)
+5. Collez-les dans `cookies.txt`, une ligne par cookie au format `NOM=VALEUR`.
+
+Exemple :
 
 ```text
 MoodleSession=...
 _shibsession_...=...
-```
-
-### Fallback : identifiant / mot de passe
-
-Créer `login.txt` :
-
-```text
-email@unine.ch
-mot_de_passe
 ```
 
 ## Format du fichier d’entrée
@@ -90,6 +90,23 @@ python main.py --url "https://moodle.unine.ch/mod/ubicast/view.php?id=xxxxxx"
 | `--output-dir` | `dl` | Dossier de sortie |
 | `--show-browser` | `false` | Affiche le navigateur pour debug auth |
 | `--keep-temp` | `false` | Conserve les fichiers audio/vidéo séparés |
+
+## Build EXE (PyInstaller)
+
+Commande de compilation :
+
+```powershell
+compile.cmd
+```
+
+Sortie :
+
+- `dist/moodle-video-bulk-downloader.exe`
+
+Important :
+
+- Gardez `tools/ffmpeg.exe` et `tools/mkvmerge.exe` disponibles avec votre projet/distribution.
+- `icon.ico` est utilisé pendant la compilation de l'EXE.
 
 ## Sortie
 

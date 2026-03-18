@@ -7,3 +7,7 @@ dl/
 cookies.txt
 test.txt
 tools/
+release/
+build/
+dist/
+*.spec
