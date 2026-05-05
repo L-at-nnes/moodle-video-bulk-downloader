@@ -14,7 +14,7 @@ from .input_parsing import build_entries
 from .models import CliError, LinkEntry
 from .streams import extract_streams_from_page, parse_video_height_from_url
 from .system_tools import ensure_local_mkvtoolnix, find_ffmpeg
-from .utils import sanitize_name
+from .utils import sanitize_name, unique_output_path
 
 
 def process_one_link(
@@ -28,6 +28,7 @@ def process_one_link(
     download_threads: int,
     ffmpeg_timeout_s: int,
     keep_temp: bool,
+    dry_run: bool,
 ) -> tuple[LinkEntry, Optional[Path], Optional[str]]:
     try:
         tqdm.write(f"[extract] {entry.url}")
@@ -48,6 +49,14 @@ def process_one_link(
             tqdm.write(f"[download] {stream_info.title}")
 
         target_dir = output_root / sanitize_name(entry.course, "cours")
+
+        if dry_run:
+            final_output = unique_output_path(target_dir, stream_info.title)
+            tqdm.write(f"[dry-run] Would download: {stream_info.title} -> {final_output}")
+            tqdm.write(f"  audio: {stream_info.audio_m3u8}")
+            tqdm.write(f"  video: {stream_info.video_m3u8}")
+            return entry, final_output, None
+
         output_file = download_and_mux(
             stream_info=stream_info,
             output_dir=target_dir,
@@ -75,6 +84,7 @@ def parse_args(argv: Optional[Iterable[str]] = None) -> argparse.Namespace:
     parser.add_argument("--ffmpeg-timeout", type=int, default=1800, help="Timeout in seconds per audio/video download")
     parser.add_argument("--show-browser", action="store_true", help="Show browser (debug authentication)")
     parser.add_argument("--keep-temp", action="store_true", help="Keep separate audio/video files")
+    parser.add_argument("--dry-run", action="store_true", help="Show what would be downloaded without downloading")
     return parser.parse_args(argv)
 
 
@@ -88,11 +98,7 @@ def main(argv: Optional[Iterable[str]] = None) -> int:
     if args.ffmpeg_timeout < 60:
         raise CliError("--ffmpeg-timeout must be >= 60")
 
-    entries = build_entries(args.url, args.input)
     project_root = Path.cwd()
-
-    ffmpeg_path = find_ffmpeg(project_root)
-    mkvmerge_path = ensure_local_mkvtoolnix(project_root)
 
     storage_state_path = project_root / "playwright-state.json"
     auth_mode = create_storage_state(
@@ -100,6 +106,33 @@ def main(argv: Optional[Iterable[str]] = None) -> int:
         cookie_file=args.cookie_file,
         headless=not args.show_browser,
     )
+
+    entries = build_entries(args.url, args.input)
+
+    # expand course pages into individual Ubicast activity links
+    from .scraper import scan_course_for_ubicast_links
+    from playwright.sync_api import sync_playwright
+
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=not args.show_browser)
+        expanded: list[LinkEntry] = []
+        for entry in entries:
+            if "/course/view.php" in entry.url or "/course/" in entry.url:
+                try:
+                    found = scan_course_for_ubicast_links(browser, storage_state_path, entry.url)
+                    if found:
+                        expanded.extend(found)
+                        continue
+                except Exception:
+                    pass
+            expanded.append(entry)
+
+        browser.close()
+
+    entries = expanded
+
+    ffmpeg_path = find_ffmpeg(project_root)
+    mkvmerge_path = ensure_local_mkvtoolnix(project_root)
 
     args.output_dir.mkdir(parents=True, exist_ok=True)
     print(
@@ -125,6 +158,7 @@ def main(argv: Optional[Iterable[str]] = None) -> int:
                 args.download_threads,
                 args.ffmpeg_timeout,
                 args.keep_temp,
+                args.dry_run,
             )
             for entry in entries
         ]
