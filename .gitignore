@@ -1,0 +1,16 @@
+__pycache__/
+*.pyc
+.venv/
+dl/
+.tmp/
+*.log
+cookies.txt
+test.txt
+tools/
+release/
+build/
+dist/
+*.spec
+cours.txt
+liens.txt
+playwright-state.json
