@@ -1,16 +1,18 @@
-__pycache__/
-*.pyc
-.venv/
-dl/
+/target/
 .tmp/
 *.log
+
+# Cookies
 cookies.txt
-test.txt
+
+# Downloads
+dl/
+
+# 
 tools/
-release/
-build/
-dist/
-*.spec
+MVBD-Portable/
+
+# Tests
 cours.txt
 liens.txt
-playwright-state.json
+test.txt

@@ -1,0 +1,28 @@
+[package]
+name = "mvbd-gui"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version = "1.77.2"
+
+[lib]
+name = "mvbd_gui_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[[bin]]
+name = "mvbd-gui"
+path = "src/main.rs"
+
+[build-dependencies]
+tauri-build = { version = "2.6.3", features = [] }
+
+[dependencies]
+mvbd-core = { path = "../../core" }
+tokio = { workspace = true }
+tokio-util = { workspace = true }
+serde_json = "1.0"
+serde = { version = "1.0", features = ["derive"] }
+log = "0.4"
+tauri = { version = "2.11.3", features = [] }
+tauri-plugin-log = "2"
+tauri-plugin-dialog = "2"

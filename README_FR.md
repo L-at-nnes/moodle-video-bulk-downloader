@@ -1,6 +1,6 @@
 # Moodle Video Bulk Downloader
 
-[![Python](https://img.shields.io/badge/Python-3.11%2B-blue)](https://www.python.org/)
+[![Rust](https://img.shields.io/badge/Rust-2021-orange)](https://www.rust-lang.org/)
 [![Licence: MIT](https://img.shields.io/badge/Licence-MIT-green.svg)](LICENSE)
 [![PRs Welcome](https://img.shields.io/badge/PRs-bienvenues-brightgreen.svg)](CONTRIBUTING.md)
 
@@ -8,129 +8,116 @@ English version: [README.md](README.md)
 
 ## Avertissement
 
-1. Cet outil est destiné uniquement à l’archivage personnel. Ne republiez pas les enregistrements sans l’accord explicite du professeur.
-2. Il peut fonctionner ou non selon les instances Moodle. N’hésitez pas à forker le projet et proposer une pull request. *Créé pour moodle.unine.ch*
+1. Cet outil sert uniquement à l'archivage personnel. Ne republiez pas les enregistrements de cours sans l'autorisation explicite de votre professeur.
+2. Il ne fonctionnera pas forcément sur toutes les instances Moodle. N'hésitez pas à forker et ouvrir une pull request. *Développé à l'origine pour moodle.unine.ch.*
+
+## Ce que ça fait
+
+Donnez-lui une page de replay Moodle/UbiCast (ou une page de cours, ou un fichier texte listant plusieurs liens) : il se connecte avec vos cookies de session, trouve les flux HLS audio et vidéo, télécharge les deux en parallèle avec `ffmpeg`, puis les muxe en un seul MKV avec `mkvmerge`. Pas de Python, pas de `pip install`, pas d'extension de navigateur — un seul exécutable.
+
+C'est une réécriture complète en Rust de ce qui était un script Python/Playwright. La bibliothèque principale, le CLI et la GUI partagent le même moteur de téléchargement (`crates/core`) ; un Chromium headless embarqué, piloté via le protocole DevTools, remplace ce que faisait Playwright avant.
+
+## Interface graphique
+
+![Capture d'écran de la GUI](docs/screenshot.png)
+
+Collez vos cookies, collez vos liens (ou une liste au format `liens.txt`), choisissez un dossier de sortie, cliquez sur Démarrer. Le tableau se met à jour en direct pendant que chaque vidéo est extraite, téléchargée puis muxée ; les réglages sont mémorisés d'un lancement à l'autre (les cookies non — il faut les recoller à chaque fois).
 
 ## Fonctionnalités
 
-- Téléchargement des replays Moodle/UbiCast depuis une URL ou un fichier texte
-- Support des fichiers d’entrée avec sections de cours
-- Authentification uniquement par cookies (`cookies.txt`)
-- Détection de `audio_*.m3u8` et meilleure variante vidéo disponible (ex: `1440p > 1080p`)
-- Scan automatique des pages de cours : si vous passez l'URL d'un cours, l'outil découvrira et mettra en file tous les modules UbiCast détectés
-- Téléchargement audio/vidéo avec barres de progression
-- Mux final en MKV avec `mkvmerge` (MKVToolNix CLI)
-- Traitement en parallèle
-- Retry automatique en cas d'échec d'extraction (3 tentatives)
-- Ctrl+C propre : annule les tâches en attente et quitte immédiatement
+- Télécharge un seul replay, ou pointe sur une page de cours pour découvrir automatiquement toutes les activités UbiCast/mediaserver qu'elle contient
+- Analyse les fichiers d'entrée groupés (nom de cours sur sa propre ligne, URLs en dessous)
+- Authentification par cookies uniquement (`cookies.txt`, ou collés directement dans la GUI)
+- Choisit automatiquement la meilleure résolution vidéo disponible (ex. `1440p > 1080p`), en testant des résolutions voisines que la page elle-même ne mentionnait pas
+- Téléchargement audio et vidéo en parallèle pour chaque vidéo
+- Arrête d'attendre les URLs de flux dès que les deux sont trouvées, plutôt que d'attendre systématiquement le délai maximal
+- Nouvelle tentative automatique avec repli exponentiel (3 essais, 5 s puis 10 s)
+- Datation des fichiers : la date de modification du fichier est réglée sur la date de publication de la vidéo, récupérée sur la page (`--no-set-file-date` pour désactiver)
+- Concurrence limitée entre vidéos (`--concurrency` / réglage GUI)
+- Ctrl+C / Annuler tue immédiatement tous les process ffmpeg en cours
 
-## Prérequis
+## Récupérer l'appli
 
-- Python 3.11+
-
-Installer les dépendances :
+Deux options : récupérer un dossier `MVBD-Portable` déjà construit (GUI + CLI + ffmpeg/mkvmerge/Chromium, rien d'autre à installer), ou le construire soi-même :
 
 ```powershell
-pip install -r requirements.txt
-python -m playwright install chromium
+cargo install tauri-cli --version "^2"
+cargo build --workspace --release
 ```
 
 ## Authentification
 
 Les cookies sont la seule méthode d'authentification supportée.
 
-### Comment récupérer les cookies Moodle
-
 1. Connectez-vous à Moodle dans votre navigateur.
-2. Ouvrez les DevTools (`F12`) puis Application/Storage -> Cookies.
-3. Sélectionnez le domaine Moodle (par exemple `https://moodle.unine.ch`).
-4. Copiez au minimum `MoodleSession` et le cookie de session SSO (par ex. `_shibsession_...`).
-5. Collez-les dans `cookies.txt`. Les deux formats sont supportés :
+2. Ouvrez les outils de développement (`F12`) → Application/Stockage → Cookies, sélectionnez le domaine de votre Moodle.
+3. Copiez au moins `MoodleSession` et le cookie de session SSO (ex. `_shibsession_...`).
+4. Collez-les dans `cookies.txt`, ou directement dans le champ cookies de la GUI. Les deux formats fonctionnent :
 
-Une par ligne :
+Un par ligne :
 
 ```text
 MoodleSession=...
 _shibsession_...=...
 ```
 
-Ou sur une seule ligne (copié depuis le navigateur) :
+Ou en une ligne, tel que copié depuis le navigateur :
 
 ```text
 MoodleSession=...; _shibsession_...=...;
 ```
 
-Exemple :
+## Format du fichier d'entrée
 
-```text
-MoodleSession=...
-_shibsession_...=...
-```
-
-## Format du fichier d’entrée
-
-Exemple `test.txt` :
+Exemple `liens.txt` :
 
 ```text
 Cours A
 https://moodle.unine.ch/mod/ubicast/view.php?id=xxxxxx
 https://moodle.unine.ch/mod/ubicast/view.php?id=xxxxxx
 Cours B
-https://moodle.unine.ch/mod/ubicast/view.php?id=xxxxxx
+https://moodle.unine.ch/course/view.php?id=yyyyyy
 ```
 
-## Utilisation
+Une URL de page de cours (`/course/view.php?...`) est automatiquement développée en toutes les activités multimédia qu'elle contient.
 
-Depuis un fichier :
+## Utilisation en CLI
 
 ```powershell
-python main.py --input test.txt --cookie-file cookies.txt
+mvbd-cli.exe --input liens.txt
+mvbd-cli.exe --url "https://moodle.unine.ch/mod/ubicast/view.php?id=xxxxxx"
+mvbd-cli.exe --input liens.txt --concurrency 2
 ```
 
-Depuis une ou plusieurs URL directes :
-
-```powershell
-python main.py --url "https://moodle.unine.ch/mod/ubicast/view.php?id=xxxxxx"
-```
-
-## Options utiles
-
-| Option | Valeur par défaut | Description |
+| Option | Défaut | Description |
 | --- | --- | --- |
-| `--concurrency` | `1` | Nombre de liens traités en parallèle |
-| `--download-threads` | `1` | Threads ffmpeg par flux |
-| `--capture-wait-ms` | `8000` | Attente après clic Play pour capter les flux |
+| `--cookie-file` | `cookies.txt` | Fichier de cookies (KEY=VALUE ou une par ligne) |
+| `--concurrency` | `1` | Vidéos traitées en parallèle |
+| `--download-threads` | `4` | Threads ffmpeg par flux |
+| `--capture-wait-ms` | `8000` | Attente max pour capturer les URLs de flux (sort dès que trouvées) |
 | `--ffmpeg-timeout` | `1800` | Timeout (secondes) par téléchargement audio/vidéo |
-| `--output-dir` | `dl` | Dossier de sortie |
-| `--show-browser` | `false` | Affiche le navigateur pour debug auth |
-| `--keep-temp` | `false` | Conserve les fichiers audio/vidéo séparés |
-| `--dry-run` | `false` | Affiche ce qui serait téléchargé sans effectuer le téléchargement |
+| `--output-dir` | `dl` | Répertoire de sortie |
+| `--no-set-file-date` | désactivé | Désactive la datation des fichiers |
+| `--show-browser` | désactivé | Affiche la fenêtre Chromium (debug) |
+| `--keep-temp` | désactivé | Conserve les fichiers audio/vidéo séparés |
+| `--dry-run` | désactivé | Affiche ce qui serait téléchargé sans télécharger |
 
-## Build EXE (PyInstaller)
-
-Commande de compilation :
+## Construire le dossier portable
 
 ```powershell
-compile.cmd
+scripts\build-portable.ps1
 ```
 
-Sortie :
-
-- `dist/moodle-video-bulk-downloader/moodle-video-bulk-downloader.exe` (avec `tools/ffmpeg.exe` et `tools/mkvmerge.exe` intégrés)
-
-Le dossier de l'EXE contient toutes les dépendances et outils — aucune installation supplémentaire nécessaire.
-
+Cette commande construit le CLI et la GUI en mode release, récupère ffmpeg/mkvmerge/Chromium dans `tools/`, puis assemble un dossier `MVBD-Portable/` autonome (et un `.zip` correspondant) — aucun toolchain Rust n'est nécessaire pour l'exécuter, il suffit de double-cliquer sur `mvbd-gui.exe`.
 
 ## Sortie
 
-- `dl/<Nom du cours>/<Titre du replay>.mkv`
+`dl/<Nom du cours>/<Titre de l'enregistrement>.mkv`
 
-Les binaires nécessaires sont placés directement dans `tools/` (`mkvmerge.exe`, `ffmpeg.exe`).
+## Contribuer
 
-## Contribution
-
-Consultez [CONTRIBUTING.md](CONTRIBUTING.md) pour les règles de contribution.
+Voir [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Licence
 
-Ce projet est sous licence MIT. Voir [LICENSE](LICENSE).
+MIT — voir [LICENSE](LICENSE).

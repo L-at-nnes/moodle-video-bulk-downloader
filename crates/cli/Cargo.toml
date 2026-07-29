@@ -1,0 +1,17 @@
+[package]
+name = "mvbd-cli"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "mvbd"
+path = "src/main.rs"
+
+[dependencies]
+mvbd-core = { path = "../core" }
+tokio = { workspace = true }
+clap = { version = "4", features = ["derive"] }
+ratatui = "0.30"
+crossterm = "0.29"
+tokio-util = { workspace = true }
