@@ -1,0 +1,18 @@
+/target/
+.tmp/
+*.log
+
+# Cookies
+cookies.txt
+
+# Downloads
+dl/
+
+# 
+tools/
+MVBD-Portable/
+
+# Tests
+cours.txt
+liens.txt
+test.txt

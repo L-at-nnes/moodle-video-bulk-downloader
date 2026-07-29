@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Moodle Video Bulk Downloader</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div class="shell">
+      <header class="titlebar">
+        <span class="brand">Moodle Video Bulk Downloader</span>
+        <div class="titlebar-actions">
+          <button id="btn-start" class="btn btn-accent">Démarrer</button>
+          <button id="btn-cancel" class="btn btn-danger" disabled>Annuler</button>
+        </div>
+      </header>
+
+      <div class="body">
+        <aside class="rail">
+          <div class="rail-group">
+            <div class="rail-title">Authentification</div>
+            <div class="rail-field">
+              <label for="cookies">Cookies</label>
+              <textarea id="cookies" rows="3" placeholder="MoodleSession=...; _shibsession_...=...;"></textarea>
+            </div>
+            <button id="btn-load-cookies" class="link-btn">Charger cookies.txt</button>
+          </div>
+
+          <div class="rail-group">
+            <div class="rail-title">Sortie</div>
+            <div class="rail-field">
+              <label for="output-dir">Dossier</label>
+              <div class="dir-row">
+                <input id="output-dir" type="text" value="dl" />
+                <button id="btn-pick-dir" class="btn">…</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="rail-group">
+            <div class="rail-title">Performance</div>
+            <div class="rail-row">
+              <label for="concurrency">Concurrence</label>
+              <input id="concurrency" type="number" min="1" value="1" />
+            </div>
+            <div class="rail-row">
+              <label for="download-threads">Threads ffmpeg</label>
+              <input id="download-threads" type="number" min="1" value="4" />
+            </div>
+            <div class="rail-row">
+              <label for="capture-wait">Attente capture (ms)</label>
+              <input id="capture-wait" type="number" min="500" step="500" value="8000" />
+            </div>
+            <div class="rail-row">
+              <label for="ffmpeg-timeout">Timeout ffmpeg (s)</label>
+              <input id="ffmpeg-timeout" type="number" min="60" value="1800" />
+            </div>
+          </div>
+
+          <div class="rail-group">
+            <div class="rail-title">Options</div>
+            <label class="rail-row rail-toggle" for="opt-set-file-date">
+              <span>Dater les fichiers</span>
+              <input id="opt-set-file-date" type="checkbox" checked />
+            </label>
+            <label class="rail-row rail-toggle" for="opt-keep-temp">
+              <span>Garder audio/vidéo séparés</span>
+              <input id="opt-keep-temp" type="checkbox" />
+            </label>
+            <label class="rail-row rail-toggle" for="opt-dry-run">
+              <span>Simulation (dry-run)</span>
+              <input id="opt-dry-run" type="checkbox" />
+            </label>
+            <label class="rail-row rail-toggle" for="opt-show-browser">
+              <span>Afficher le navigateur</span>
+              <input id="opt-show-browser" type="checkbox" />
+            </label>
+          </div>
+        </aside>
+
+        <main class="workspace">
+          <div class="input-block">
+            <label for="urls">Liens (nom de cours isolé au-dessus de chaque groupe d'URLs)</label>
+            <textarea
+              id="urls"
+              rows="3"
+              placeholder="Cours A&#10;https://moodle.example.ch/mod/ubicast/view.php?id=xxxxxx&#10;Cours B&#10;https://moodle.example.ch/course/view.php?id=yyyy"
+            ></textarea>
+          </div>
+
+          <div class="meter-row">
+            <div class="meter"><div id="global-progress-fill" class="meter-fill"></div></div>
+            <span id="global-progress-label" class="meter-label">0 / 0</span>
+          </div>
+
+          <div class="table-region">
+            <div class="table-scroll">
+              <table id="video-table">
+                <thead>
+                  <tr>
+                    <th class="col-idx">#</th>
+                    <th class="col-course">Cours</th>
+                    <th class="col-title">Titre</th>
+                    <th class="col-status">État</th>
+                    <th class="col-av">Audio / Vidéo</th>
+                  </tr>
+                </thead>
+                <tbody id="video-table-body"></tbody>
+              </table>
+            </div>
+            <p id="table-empty" class="empty">Collez vos liens et vos cookies, puis lancez le téléchargement.</p>
+          </div>
+
+          <div class="log-region">
+            <h2>Journal</h2>
+            <div id="log-output"></div>
+          </div>
+        </main>
+      </div>
+    </div>
+
+    <script src="app.js"></script>
+  </body>
+</html>
